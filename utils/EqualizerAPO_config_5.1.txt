@@ -1,0 +1,27 @@
+BRIR convolution configuration for Equalizer APO
+Room: Office Lars
+Speaker setup: 5.1 surround
+Dated: 09.11.2018
+ 
+Copy: C11=L C12=R C13=C C14=SUB C15=RL C16=RR
+Copy: C21=L C22=R C23=C C24=SUB C25=RL C26=RR
+
+Channel: C11 C12 C13 C14 C15 C16
+Convolution: BRIR44L.wav
+
+Channel: C21 C22 C23 C24 C25 C26
+Convolution: BRIR44R.wav
+
+Copy: L=C11+C12+C13+C14+C15+C16+0.9*SUB
+#Copy: L=C15+C16
+
+Copy: R=C21+C22+C23+C24+C25+C26+0.9*SUB
+#Copy: R=C25+C26
+
+#Copy: C=0*C 
+
+#Copy: RL=0*RL 
+
+#Copy: RR=0*RR
+
+#Copy: SUB=0*SUB

@@ -1,0 +1,10 @@
+function [vEps] = GenWindow(iN,fSamplFreq,fmin,fmax,df1,df2,fEpsMax,fEpsMin)
+f1    = fmin-df1/2;
+f2    = fmin+df1/2;
+f3    = fmax-df2/2;
+f4    = fmax+df2/2;
+vX    = [f1-1,f1,f2,f3,f4,f4+1];
+vY    = [fEpsMax,fEpsMax,fEpsMin,fEpsMin,fEpsMax,fEpsMax];
+vFreq = [0:iN/2-1]/iN*fSamplFreq+1e-12;
+vWin  = interp1(log10(vX),vY,log10(vFreq),'linear','extrap');
+vEps  = [vWin,vWin(iN/2),vWin(end:-1:2)];

@@ -1,0 +1,13 @@
+BRIR convolution configuration for Equalizer APO
+Room: Office Lars
+Speaker setup: 2.0 stereo
+Dated: 20.11.2018
+Preamp: 10 dB
+Copy: C11=L C12=R
+Channel: C11 C12
+Convolution: BRIR44L.wav
+Copy: C21=L C22=R
+Channel: C21 C22
+Convolution: BRIR44R.wav
+Copy: L=C11+C12
+Copy: R=C21+C22

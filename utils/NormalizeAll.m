@@ -1,0 +1,10 @@
+function [vTF1n,vTF2n,vTF3n,vTF4n,vIR1n,vIR2n,vIR3n,vIR4n] = NormalizeAll(vTF1,vTF2,vTF3,vTF4)
+[fMax,~]  = max([abs(vTF1);abs(vTF2);abs(vTF3);abs(vTF4)]);
+vTF1n = vTF1/fMax;
+vTF2n = vTF2/fMax;
+vTF3n = vTF3/fMax;
+vTF4n = vTF4/fMax;
+vIR1n = ifft(vTF1n);
+vIR2n = ifft(vTF2n);
+vIR3n = ifft(vTF3n);
+vIR4n = ifft(vTF4n);
