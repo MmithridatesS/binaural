@@ -113,9 +113,14 @@ if bEquidist
     %end
     %set(sb,'Fontsize',7)
   end
-else 
+else
 end
-
+sFileName = ['measure/room/2.0/ds/Home_221025_left_right'];
+load(sFileName,'measurementData');
+measurementData.extra.mSweep = mSweep;
+measurementData.extra.vInvSweep = vInvSweep;
+save(sFileName,'measurementData');
+end
 
 
 

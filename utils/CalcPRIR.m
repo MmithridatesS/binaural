@@ -4,7 +4,7 @@ function [mIR] = CalcPRIR(sSetup,sRoomName)
 switch nargin
   case 2
     disp(' ');
-    disp(['Calculating PRIR for dataset: ',sSetup,'/',sRoomName])
+    disp(['Calculating PRIR for dataset: ',sSetup,'/ds/',sRoomName])
   otherwise
     warning('Check number of input parameters!');
 end
@@ -16,10 +16,10 @@ iN              = stSys.iN;
 iOffset         = stSys.iOffset;
 fSampFreq       = stSys.fSampFreq;
 
-load(['measure/room/',sSetup,'/',sRoomName],'stRoomMeas');
+load(['measure/room/',sSetup,'/ds/',sRoomName],'measurementData');
 stPRIR.fSR      = fSampFreq;
-stPRIR.vAngle   = stRoomMeas.vAngle;
-vInverse        = stRoomMeas.vInvSweep;
+stPRIR.Angles   = measurementData.Angles;
+vInverse        = measurementData.extra.vInvSweep;
 
 % read room correction filter
 if bRoomCor
@@ -27,8 +27,8 @@ if bRoomCor
 end
 
 %% DECONVOLUTION 
-vActTxInt = find(stRoomMeas.vActTx);
-iNoTx     = length(stRoomMeas.vActTx);
+vActTxInt = find(measurementData.extra.vActTx);
+iNoTx     = length(measurementData.extra.vActTx);
 iNoActTx  = length(vActTxInt);
 
 fHeadRadius  = stEnv.fHeadRadius;
@@ -36,12 +36,13 @@ fDist2Source = stEnv.fDist2Source;
 vAngleSource = stEnv.vAngleSource;
 
 disp('Coarse timing and ITD calculation ...');
-iNoAngles   = length(stRoomMeas.vAngle);
+iNoAngles   = length(measurementData.Angles);
 mITDvsAngle = zeros(2,2,iNoAngles);
 for iCA = 1:iNoAngles
-  disp(['  for angle: ',int2str(stRoomMeas.vAngle(iCA)),'°'])
-  fAngle_head   = stRoomMeas.vAngle(iCA);
-  mLogSweep_rec = stRoomMeas.stMeasData(iCA).mRecSig;
+  disp(['  for angle (azimuth, elevation): ',int2str(measurementData.Angles(1,iCA)),',',int2str(measurementData.Angles(2,iCA)),'°'])
+  fAngle_head_azimuth   = measurementData.Angles(1,iCA);
+  fAngle_head_elevation   = measurementData.Angles(2,iCA);
+  mLogSweep_rec = measurementData.Data(iCA).mRecSig;
   iLen          = size(mLogSweep_rec,1);
   iLenPerSource = floor(iLen/iNoActTx);
   mLogSweep_rec = mLogSweep_rec(1:iLenPerSource*iNoActTx,:);
@@ -84,10 +85,10 @@ for iCA = 1:iNoAngles
       mIR_aligned(:,iCRx,iCTx)  = TimeShift(mIR_long(:,iCRx,iCTx),iOffset+1-mTD_meas(iCRx,iCTx));
     end
     vITD_meas(iCTx) = mTD_meas(2,iCTx)-mTD_meas(1,iCTx);
-    mITDvsAngle(:,iCTx,iCA) = [-fAngle_head;vITD_meas(iCTx)];
+    mITDvsAngle(:,iCTx,iCA) = [-fAngle_head_azimuth;vITD_meas(iCTx)]; % find a way to nest fAngle_head_elevation
   end
   % save mIR
-  stPRIR.stData(iCA).mIR = mIR_aligned(1:iN,:,:);
+  stPRIR.Data(iCA).mIR = mIR_aligned(1:iN,:,:);
 end
 disp(' ');
 
@@ -117,7 +118,7 @@ for iCTx = 1:iNoTx
   disp(['RMSE of polynomial interpolation: ',num2str(sqrt(mean((mITD_poly(2,iCTx,:)-mITDvsCorrAngle(2,iCTx,:)).^2))),' samples'])
   plot(squeeze(mITDvsCorrAngle(1,iCTx,:)),squeeze(mITDvsCorrAngle(2,iCTx,:)),'.','MarkerSize',15); hold on; grid on;
   plot(squeeze(mITDvsCorrAngle(1,iCTx,:)),squeeze(mITD_poly(2,iCTx,:)),'-');
-  xlabel('Angles [Grad]');
+  xlabel('Azimuth Angles [Grad]');
   ylabel('Interaural time delay [Samples]');
   sLegend{2*(iCTx-1)+1} = ['Tx ',int2str(iCTx),' measured'];
   sLegend{2*(iCTx-1)+2} = ['Tx ',int2str(iCTx),' polynomial'];
@@ -133,15 +134,15 @@ disp('Calculation of average ITDs ...');
 
 %% Compare ITD according to model and measurement
 disp(' '); disp('ITD calculation ...')
-for iCA = 1:length(stRoomMeas.vAngle)
-  disp(['  for angle: ',int2str(stRoomMeas.vAngle(iCA)),'°'])
+for iCA = 1:length(measurementData.Angles)
+  disp(['  for angle (azimuth, elevation): ',int2str(measurementData.Angles(1,iCA)),',',int2str(measurementData.Angles(2,iCA)),'°'])
   %% ITD COMPARISON (measured/predicted)
-  fAngle_head = stRoomMeas.vAngle(iCA);
+  fAngle_head_azimuth = measurementData.Angles(1,iCA);
   vITD_model  = zeros(iNoTx,1);
   vITD_poly   = zeros(iNoTx,1);
   for iCTx = 1:iNoTx
-    vITD_model(iCTx,1)  = CalcITD(fHeadRadius,fDist2Source,vAngleSource(iCTx),fAngle_head);
-    vITD_poly(iCTx,1)   = interp1(mITD_poly(1,:),mITD_poly(2,:),vAngleSource(iCTx)-fAngle_head,'pchip');
+    vITD_model(iCTx,1)  = CalcITD(fHeadRadius,fDist2Source,vAngleSource(iCTx),fAngle_head_azimuth);
+    vITD_poly(iCTx,1)   = interp1(mITD_poly(1,:),mITD_poly(2,:),vAngleSource(iCTx)-fAngle_head_azimuth,'pchip');
   end
   
   % display on console
@@ -155,7 +156,7 @@ for iCA = 1:length(stRoomMeas.vAngle)
     sITDpoly    = [sITDpoly,'  ',num2str(vITD_poly(iC),'%0+5.1f')];  
     sITDmodel   = [sITDmodel,'  ',num2str(vITD_model(iC),'%0+5.1f')];  
     sAnglesTx   = [sAnglesTx, '  ',num2str(vAngleSource(iC),'%0+3.0f'),'° '];
-    sAnglesDiff = [sAnglesDiff, '  ',num2str(vAngleSource(iC)-fAngle_head,'%0+3.0f'),'° '];
+    sAnglesDiff = [sAnglesDiff, '  ',num2str(vAngleSource(iC)-fAngle_head_azimuth,'%0+3.0f'),'° '];
   end  
   % disp(['    Angle source:  ',sAnglesTx])
   disp(['    Angle diff:    ',sAnglesDiff])
@@ -168,19 +169,19 @@ end
 
 % find volume max in FD, normalization could be implemented more efficiently
 fVolMax = 0;
-for iCA = 1:length(stRoomMeas.vAngle)
+for iCA = 1:length(measurementData.Angles)
   % load IR
-  mIR = stPRIR.stData(iCA).mIR;
+  mIR = stPRIR.Data(iCA).mIR;
   % Fourier transform
   mTF = fft(mIR,iN,1);
   % find volume max
   fVolMax = max(fVolMax,max(abs(mTF(:))));
 end
 
-for iCA = 1:length(stRoomMeas.vAngle)
+for iCA = 1:length(measurementData.Angles)
 
   % load IR
-  mIR = stPRIR.stData(iCA).mIR;
+  mIR = stPRIR.Data(iCA).mIR;
 
   % Fourier transform
   mTF = fft(mIR,iN,1);
@@ -269,8 +270,8 @@ for iCA = 1:length(stRoomMeas.vAngle)
   end
   
   % save in structure
-  stPRIR.stData(iCA).mIR      = mIR;
-  stPRIR.stData(iCA).mTD_meas = mTD_meas-min(mTD_meas(:,1));
+  stPRIR.Data(iCA).mIR      = mIR;
+  stPRIR.Data(iCA).mTD_meas = mTD_meas-min(mTD_meas(:,1));
   
   %% GRAPHICAL OUTPUT
   if bShowPRIR
@@ -299,9 +300,9 @@ for iCA = 1:length(stRoomMeas.vAngle)
     xlabel('Time [ms]');
     subplot(iNoActTx,2,1);
     if ~bStepResponse
-      title(['Room IR at ',int2str(stPRIR.vAngle(iCA)),'°']);
+      title(['Room IR at (azimuth,elevation): ',int2str(measurementData.Angles(1,iCA)),',',int2str(measurementData.Angles(2,iCA)),'°']);
     else
-      title(['Room SR at ',int2str(stPRIR.vAngle(iCA)),'°']);
+      title(['Room SR at (azimuth,elevation): ',int2str(measurementData.Angles(1,iCA)),',',int2str(measurementData.Angles(2,iCA)),'°']);
     end
     for iCTx = 1:iNoActTx
       subplot(iNoActTx,2,2*iCTx);
@@ -315,13 +316,13 @@ for iCA = 1:length(stRoomMeas.vAngle)
     end
     xlabel('Frequency [Hz]');
     subplot(iNoActTx,2,2);
-    title(['Room frequency response at ',int2str(stPRIR.vAngle(iCA)),'°']);
+    title(['Room frequency response at (azimuth,elevation): ',int2str(measurementData.Angles(1,iCA)),',',int2str(measurementData.Angles(2,iCA)),'°']);
   end
 end
 %% SAVE DATASET
-stPRIR.vActTx       = stRoomMeas.vActTx;
-stPRIR.iNoHeadPos   = stRoomMeas.iNoHeadPos;
-stPRIR.iHeadRange   = stRoomMeas.iHeadRange;
+stPRIR.vActTx       = measurementData.extra.vActTx;
+stPRIR.iNoHeadPos   = measurementData.extra.iNoHeadPos;
+stPRIR.iHeadRange   = measurementData.extra.iHeadRange;
 stPRIR.fHeadRadius  = fHeadRadius;
 stPRIR.fDist2Source = fDist2Source;
 stPRIR.vAngleSource = vAngleSource;
